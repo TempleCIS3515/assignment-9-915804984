@@ -9,9 +9,7 @@ import android.view.ViewGroup
 class BookPlayerFragment : Fragment() {
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_book_player, container, false)
     }
 
@@ -23,7 +21,12 @@ class BookPlayerFragment : Fragment() {
                 .beginTransaction()
                 .add(R.id.book_fragment_container, BookFragment())
                 .commit()
+
+        //correct?
+        if (childFragmentManager.findFragmentById(R.id.book_control_fragment_container) == null)
+            childFragmentManager
+                .beginTransaction()
+                .add(R.id.book_control_fragment_container, BookControlFragment()) //add play and pause fragment
+                .commit()
     }
-
-
 }

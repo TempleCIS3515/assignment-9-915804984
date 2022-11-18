@@ -2,16 +2,33 @@ package edu.temple.flossplayer
 
 import android.app.SearchManager
 import android.content.Intent
+import android.media.MediaPlayer
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
+import android.widget.LinearLayout
+import android.widget.SeekBar
 import android.widget.Toast
 import androidx.lifecycle.ViewModelProvider
 import com.android.volley.RequestQueue
 import com.android.volley.toolbox.JsonArrayRequest
 import com.android.volley.toolbox.Volley
+import edu.temple.audlibplayer.PlayerService
 
 class MainActivity : AppCompatActivity() {
+
+    lateinit var mediaPlayer: MediaPlayer
+    lateinit var seekBar: SeekBar
+
+    fun Play(view: View){
+        mediaPlayer = MediaPlayer.create(this, R.libs.audlib-player)
+        mediaPlayer.start()
+    }
+
+    fun Pause (view: View){
+        mediaPlayer.pause()
+    }
+
 
     private val searchURL = "https://kamorris.com/lab/flossplayer/search.php?query="
 
@@ -77,6 +94,11 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.searchImageButton).setOnClickListener {
             onSearchRequested()
         }
+
+        //for seek bar, if
+        findViewById<LinearLayout>(R.id.progressContainer).visibility = View.GONE
+
+        bindService(PlayerService::class.java, )
     }
 
     override fun onBackPressed() {
