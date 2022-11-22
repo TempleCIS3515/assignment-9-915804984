@@ -15,16 +15,20 @@ import com.android.volley.RequestQueue
 import com.android.volley.toolbox.JsonArrayRequest
 import com.android.volley.toolbox.Volley
 import edu.temple.audlibplayer.PlayerService
+import android.content.ContentValues.TAG
+import android.os.IBinder
+import android.util.Log
 
 class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
 
     private val searchURL = "https://kamorris.com/lab/flossplayer/search.php?query="
     private lateinit var playerBinder: PlayerService.MediaControlBinder
     lateinit var seekBar: SeekBar
-
-    //onReceive
+    private var isBound = false
     private var activeBookID = -1
     private var progressTime = 0
+
+    //onReceive
     private val receiver = object : BroadcastReceiver()
     {
         override fun onReceive(context: Context?, intent: Intent?)
@@ -37,13 +41,15 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
         }
     }
 
-    //handler
+    //handleMessage
     private val handler = @SuppressLint("HandlerLeak")
-    object : Handler() {
-        override fun handleMessage(msg: Message) {
+    object : Handler()
+    {
+        override fun handleMessage(msg: Message)
+        {
             val bProgress = (msg.obj as PlayerService.BookProgress)
 
-            Intent().also {
+            Intent().also{
                 it.action = "edu.temple.floss-player.SelectedBookProgress"
                 it.putExtra("id", (bProgress.book as PlayerService.FlossAudioBook).getBookId())
                 it.putExtra("progress", bProgress.progress)
@@ -51,6 +57,23 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
             }
         }
     }
+
+    private val serviceConnection = object : ServiceConnection
+    {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?)
+        {
+            playerBinder = (service as PlayerService.MediaControlBinder)
+            playerBinder.setProgressHandler(handler)
+            isBound = true
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?)
+        {
+            Log.e(TAG, "onServiceDisconnected")
+            isBound = false
+        }
+    }
+
 
     private val requestQueue: RequestQueue by lazy {
         Volley.newRequestQueue(this)
