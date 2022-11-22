@@ -1,46 +1,48 @@
 package edu.temple.flossplayer
 
 import android.app.SearchManager
-import android.content.Intent
-import android.media.MediaPlayer
-import androidx.appcompat.app.AppCompatActivity
+import android.content.*
 import android.os.Bundle
 import android.view.View
-import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.android.volley.RequestQueue
 import com.android.volley.toolbox.JsonArrayRequest
 import com.android.volley.toolbox.Volley
 import edu.temple.audlibplayer.PlayerService
 
-class MainActivity : AppCompatActivity() {
-
-    lateinit var mediaPlayer: MediaPlayer
-    lateinit var seekBar: SeekBar
-
-    fun Play(view: View){
-        mediaPlayer = MediaPlayer.create(this, R.libs.audlib-player)
-        mediaPlayer.start()
-    }
-
-    fun Pause (view: View){
-        mediaPlayer.pause()
-    }
-
+class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
 
     private val searchURL = "https://kamorris.com/lab/flossplayer/search.php?query="
+    private lateinit var playerBinder: PlayerService.MediaControlBinder
+    lateinit var seekBar: SeekBar
 
-    private val requestQueue : RequestQueue by lazy {
+    //onReceive
+    private var activeBookID = -1
+    private var progressTime = 0
+    private val receiver = object : BroadcastReceiver()
+    {
+        override fun onReceive(context: Context?, intent: Intent?)
+        {
+            if (intent?.action == "edu.temple.floss-player.SelectedBookProgress")
+            {
+                activeBookID = intent.getIntExtra("id", -1)
+                progressTime = intent.getIntExtra("progress", 0)
+            }
+        }
+    }
+
+    private val requestQueue: RequestQueue by lazy {
         Volley.newRequestQueue(this)
     }
 
-    private val isSingleContainer : Boolean by lazy{
+    private val isSingleContainer: Boolean by lazy {
         findViewById<View>(R.id.container2) == null
     }
 
-    private val bookViewModel : BookViewModel by lazy {
+    private val bookViewModel: BookViewModel by lazy {
         ViewModelProvider(this)[BookViewModel::class.java]
     }
 
@@ -78,7 +80,7 @@ class MainActivity : AppCompatActivity() {
 
 
         // Respond to selection in portrait mode using flag stored in ViewModel
-        bookViewModel.getSelectedBook()?.observe(this){
+        bookViewModel.getSelectedBook()?.observe(this) {
             if (!bookViewModel.hasViewedSelectedBook()) {
                 if (isSingleContainer) {
                     supportFragmentManager.beginTransaction()
@@ -95,10 +97,6 @@ class MainActivity : AppCompatActivity() {
             onSearchRequested()
         }
 
-        //for seek bar, if
-        findViewById<LinearLayout>(R.id.progressContainer).visibility = View.GONE
-
-        bindService(PlayerService::class.java, )
     }
 
     override fun onBackPressed() {
@@ -121,7 +119,6 @@ class MainActivity : AppCompatActivity() {
                 supportFragmentManager.popBackStack()
             }
         }
-
     }
 
     private fun searchBooks(searchTerm: String) {
@@ -130,5 +127,29 @@ class MainActivity : AppCompatActivity() {
                 { bookViewModel.updateBooks(it) },
                 { Toast.makeText(this, it.networkResponse.toString(), Toast.LENGTH_SHORT).show() })
         )
+    }
+
+    override fun bookPause()
+    {
+        if (playerBinder.isPlaying)
+        {
+            playerBinder.pause()
+        }
+    }
+
+    override fun bookPlay()
+    {
+        if (bookViewModel.getSelectedBook() != null)
+        {
+            var currentBook = bookViewModel.getSelectedBook()?.value
+            if (activeBookID == -1 || (currentBook as PlayerService.FlossAudioBook).getBookId() != activeBookID)
+            {
+                playerBinder.play(currentBook as PlayerService.FlossAudioBook)
+            }
+                else if (!playerBinder.isPlaying)
+                {
+                    playerBinder.pause()
+                }
+        }
     }
 }
