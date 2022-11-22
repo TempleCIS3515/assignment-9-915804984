@@ -1,7 +1,10 @@
 package edu.temple.flossplayer
 
+import android.os.Message
+import android.annotation.SuppressLint
 import android.app.SearchManager
 import android.content.*
+import android.os.Handler
 import android.os.Bundle
 import android.view.View
 import android.widget.SeekBar
@@ -30,6 +33,21 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
             {
                 activeBookID = intent.getIntExtra("id", -1)
                 progressTime = intent.getIntExtra("progress", 0)
+            }
+        }
+    }
+
+    //handler
+    private val handler = @SuppressLint("HandlerLeak")
+    object : Handler() {
+        override fun handleMessage(msg: Message) {
+            val bProgress = (msg.obj as PlayerService.BookProgress)
+
+            Intent().also {
+                it.action = "edu.temple.floss-player.SelectedBookProgress"
+                it.putExtra("id", (bProgress.book as PlayerService.FlossAudioBook).getBookId())
+                it.putExtra("progress", bProgress.progress)
+                sendBroadcast(it)
             }
         }
     }
