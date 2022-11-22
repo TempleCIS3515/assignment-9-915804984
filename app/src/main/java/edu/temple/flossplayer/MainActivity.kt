@@ -18,6 +18,7 @@ import edu.temple.audlibplayer.PlayerService
 import android.content.ContentValues.TAG
 import android.os.IBinder
 import android.util.Log
+import android.widget.TextView
 
 class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
 
@@ -42,13 +43,13 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
     //handleMessage
     private val handler = @SuppressLint("HandlerLeak")
     object : Handler() {
-        override fun handleMessage(msg: Message) {
-            val bProgress = (msg.obj as PlayerService.BookProgress)
+        override fun handleMessage(message: Message) {
+            val bookProgress = (message.obj as PlayerService.BookProgress)
 
             Intent().also {
                 it.action = "edu.temple.floss-player.SelectedBookProgress"
-                it.putExtra("id", (bProgress.book as PlayerService.FlossAudioBook).getBookId())
-                it.putExtra("progress", bProgress.progress)
+                it.putExtra("id", (bookProgress.book as PlayerService.FlossAudioBook).getBookId())
+                it.putExtra("progress", bookProgress.progress)
                 sendBroadcast(it)
             }
         }
@@ -91,6 +92,10 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
         //To start service
         startService(serviceIntent)
         bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
+
+        //NowPlaying TextView
+        val textView: TextView = findViewById(R.id.NowPlayingText)
+
 
         // If we're switching from one container to two containers
         // clear BookPlayerFragment from container1
@@ -163,9 +168,9 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
         }
     }
 
-    private fun searchBooks(searchTerm: String) {
+    private fun searchBooks(searchString: String) {
         requestQueue.add(
-            JsonArrayRequest(searchURL + searchTerm,
+            JsonArrayRequest(searchURL + searchString,
                 { bookViewModel.updateBooks(it) },
                 { Toast.makeText(this, it.networkResponse.toString(), Toast.LENGTH_SHORT).show() })
         )
@@ -179,20 +184,21 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
 
     override fun bookPlay() {
         if (bookViewModel.getSelectedBook() != null) {
-            var currentBook = bookViewModel.getSelectedBook()?.value
-            if (activeBookID == -1 || (currentBook as PlayerService.FlossAudioBook).getBookId() != activeBookID) {
-                playerBinder.play(currentBook as PlayerService.FlossAudioBook)
+            var selectedBook = bookViewModel.getSelectedBook()?.value
+            if (activeBookID == -1 || (selectedBook as PlayerService.FlossAudioBook).getBookId() != activeBookID) {
+                playerBinder.play(selectedBook as PlayerService.FlossAudioBook)
             } else if (!playerBinder.isPlaying) {
                 playerBinder.pause()
             }
         }
+
     }
 
     //SeekBar
     val progressListener = object : SeekBar.OnSeekBarChangeListener {
-        override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-            if (fromUser) {
-                playerBinder.seekTo(progress)
+        override fun onProgressChanged(seekBar: SeekBar?, i: Int, boolean: Boolean) {
+            if (boolean) {
+                playerBinder.seekTo(i)
             }
         }
 
