@@ -27,14 +27,12 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
     private var isBound = false
     private var activeBookID = -1
     private var progressTime = 0
+    private lateinit var serviceIntent: Intent
 
     //onReceive
-    private val receiver = object : BroadcastReceiver()
-    {
-        override fun onReceive(context: Context?, intent: Intent?)
-        {
-            if (intent?.action == "edu.temple.floss-player.SelectedBookProgress")
-            {
+    private val receiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "edu.temple.floss-player.SelectedBookProgress") {
                 activeBookID = intent.getIntExtra("id", -1)
                 progressTime = intent.getIntExtra("progress", 0)
             }
@@ -43,13 +41,11 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
 
     //handleMessage
     private val handler = @SuppressLint("HandlerLeak")
-    object : Handler()
-    {
-        override fun handleMessage(msg: Message)
-        {
+    object : Handler() {
+        override fun handleMessage(msg: Message) {
             val bProgress = (msg.obj as PlayerService.BookProgress)
 
-            Intent().also{
+            Intent().also {
                 it.action = "edu.temple.floss-player.SelectedBookProgress"
                 it.putExtra("id", (bProgress.book as PlayerService.FlossAudioBook).getBookId())
                 it.putExtra("progress", bProgress.progress)
@@ -58,22 +54,19 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
         }
     }
 
-    private val serviceConnection = object : ServiceConnection
-    {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?)
-        {
+    //onServiceConnected+Disconnected
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             playerBinder = (service as PlayerService.MediaControlBinder)
             playerBinder.setProgressHandler(handler)
             isBound = true
         }
 
-        override fun onServiceDisconnected(name: ComponentName?)
-        {
+        override fun onServiceDisconnected(name: ComponentName?) {
             Log.e(TAG, "onServiceDisconnected")
             isBound = false
         }
     }
-
 
     private val requestQueue: RequestQueue by lazy {
         Volley.newRequestQueue(this)
@@ -90,6 +83,14 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        //to register the receiver
+        registerReceiver(receiver, IntentFilter("edu.temple.floss-player.SelectedBookProgress"))
+        serviceIntent = Intent(this, PlayerService::class.java)
+
+        //To start service
+        startService(serviceIntent)
+        bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
 
         // If we're switching from one container to two containers
         // clear BookPlayerFragment from container1
@@ -170,27 +171,37 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
         )
     }
 
-    override fun bookPause()
-    {
-        if (playerBinder.isPlaying)
-        {
+    override fun bookPause() {
+        if (playerBinder.isPlaying) {
             playerBinder.pause()
         }
     }
 
-    override fun bookPlay()
-    {
-        if (bookViewModel.getSelectedBook() != null)
-        {
+    override fun bookPlay() {
+        if (bookViewModel.getSelectedBook() != null) {
             var currentBook = bookViewModel.getSelectedBook()?.value
-            if (activeBookID == -1 || (currentBook as PlayerService.FlossAudioBook).getBookId() != activeBookID)
-            {
+            if (activeBookID == -1 || (currentBook as PlayerService.FlossAudioBook).getBookId() != activeBookID) {
                 playerBinder.play(currentBook as PlayerService.FlossAudioBook)
+            } else if (!playerBinder.isPlaying) {
+                playerBinder.pause()
             }
-                else if (!playerBinder.isPlaying)
-                {
-                    playerBinder.pause()
-                }
+        }
+    }
+
+    //SeekBar
+    val progressListener = object : SeekBar.OnSeekBarChangeListener {
+        override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+            if (fromUser) {
+                playerBinder.seekTo(progress)
+            }
+        }
+
+        override fun onStartTrackingTouch(seekBar: SeekBar?) {
+
+        }
+
+        override fun onStopTrackingTouch(seekBar: SeekBar?) {
+
         }
     }
 }
