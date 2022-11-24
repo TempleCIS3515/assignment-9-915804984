@@ -30,6 +30,9 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
     private var progressTime = 0
     private lateinit var serviceIntent: Intent
 
+    //NowPlaying TextView
+    lateinit var nowPlayingTxtVw: TextView
+
     //onReceive
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -41,8 +44,9 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
     }
 
     //handleMessage
-    private val handler = @SuppressLint("HandlerLeak")
+    val handler = @SuppressLint("HandlerLeak")
     object : Handler() {
+        @SuppressLint("SetTextI18n")
         override fun handleMessage(message: Message) {
             val bookProgress = (message.obj as PlayerService.BookProgress)
 
@@ -52,6 +56,12 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
                 it.putExtra("progress", bookProgress.progress)
                 sendBroadcast(it)
             }
+            seekBar.progress = bookProgress.progress
+
+            //ask? its not working
+            nowPlayingTxtVw.findViewById<TextView>(R.id.NowPlayingText)
+            nowPlayingTxtVw.text = "Now Playing ${
+                (bookProgress.book as PlayerService.FlossAudioBook)}."
         }
     }
 
@@ -85,6 +95,8 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        seekBar = findViewById(R.id.seekBar)
+        seekBar.setOnSeekBarChangeListener(progressListener)
         //to register the receiver
         registerReceiver(receiver, IntentFilter("edu.temple.floss-player.SelectedBookProgress"))
         serviceIntent = Intent(this, PlayerService::class.java)
@@ -92,10 +104,6 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
         //To start service
         startService(serviceIntent)
         bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
-
-        //NowPlaying TextView
-        val textView: TextView = findViewById(R.id.NowPlayingText)
-
 
         // If we're switching from one container to two containers
         // clear BookPlayerFragment from container1
@@ -139,11 +147,9 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
                 bookViewModel.markSelectedBookViewed()
             }
         }
-
         findViewById<View>(R.id.searchImageButton).setOnClickListener {
             onSearchRequested()
         }
-
     }
 
     override fun onBackPressed() {
@@ -191,11 +197,10 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
                 playerBinder.pause()
             }
         }
-
     }
 
     //SeekBar
-    val progressListener = object : SeekBar.OnSeekBarChangeListener {
+    var progressListener = object : SeekBar.OnSeekBarChangeListener {
         override fun onProgressChanged(seekBar: SeekBar?, i: Int, boolean: Boolean) {
             if (boolean) {
                 playerBinder.seekTo(i)
