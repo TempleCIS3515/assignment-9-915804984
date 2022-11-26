@@ -1,13 +1,17 @@
 package edu.temple.flossplayer
 
-import android.os.Message
 import android.annotation.SuppressLint
 import android.app.SearchManager
 import android.content.*
-import android.os.Handler
+import android.content.ContentValues.TAG
 import android.os.Bundle
+import android.os.Handler
+import android.os.IBinder
+import android.os.Message
+import android.util.Log
 import android.view.View
 import android.widget.SeekBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
@@ -15,10 +19,6 @@ import com.android.volley.RequestQueue
 import com.android.volley.toolbox.JsonArrayRequest
 import com.android.volley.toolbox.Volley
 import edu.temple.audlibplayer.PlayerService
-import android.content.ContentValues.TAG
-import android.os.IBinder
-import android.util.Log
-import android.widget.TextView
 
 class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
 
@@ -31,7 +31,7 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
     private lateinit var serviceIntent: Intent
 
     //NowPlaying TextView
-    lateinit var nowPlayingTxtVw: TextView
+   lateinit var nowPlayingTxtVw: TextView
 
     //onReceive
     private val receiver = object : BroadcastReceiver() {
@@ -50,18 +50,13 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
         override fun handleMessage(message: Message) {
             val bookProgress = (message.obj as PlayerService.BookProgress)
 
-            Intent().also {
-                it.action = "edu.temple.floss-player.SelectedBookProgress"
-                it.putExtra("id", (bookProgress.book as PlayerService.FlossAudioBook).getBookId())
-                it.putExtra("progress", bookProgress.progress)
-                sendBroadcast(it)
-            }
+//            Intent().also {
+//                it.action = "edu.temple.floss-player.SelectedBookProgress"
+//                it.putExtra("id", (bookProgress.book as PlayerService.FlossAudioBook).getBookId())
+//                it.putExtra("progress", bookProgress.progress)
+//                sendBroadcast(it)
+//            }
             seekBar.progress = bookProgress.progress
-
-            //ask? its not working
-            nowPlayingTxtVw.findViewById<TextView>(R.id.NowPlayingText)
-            nowPlayingTxtVw.text = "Now Playing ${
-                (bookProgress.book as PlayerService.FlossAudioBook)}."
         }
     }
 
@@ -95,8 +90,13 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        //seekbar
         seekBar = findViewById(R.id.seekBar)
         seekBar.setOnSeekBarChangeListener(progressListener)
+
+        //nowplaying
+        nowPlayingTxtVw = findViewById(R.id.NowPlayingText)
+
         //to register the receiver
         registerReceiver(receiver, IntentFilter("edu.temple.floss-player.SelectedBookProgress"))
         serviceIntent = Intent(this, PlayerService::class.java)
@@ -188,11 +188,16 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     override fun bookPlay() {
         if (bookViewModel.getSelectedBook() != null) {
-            var selectedBook = bookViewModel.getSelectedBook()?.value
+            val selectedBook = bookViewModel.getSelectedBook()?.value
             if (activeBookID == -1 || (selectedBook as PlayerService.FlossAudioBook).getBookId() != activeBookID) {
                 playerBinder.play(selectedBook as PlayerService.FlossAudioBook)
+
+                //Now playing update
+                nowPlayingTxtVw.text = "Now Playing: "+bookViewModel.getSelectedBook()?.value!!.title
+
             } else if (!playerBinder.isPlaying) {
                 playerBinder.pause()
             }
@@ -200,7 +205,7 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
     }
 
     //SeekBar
-    var progressListener = object : SeekBar.OnSeekBarChangeListener {
+    private var progressListener = object : SeekBar.OnSeekBarChangeListener {
         override fun onProgressChanged(seekBar: SeekBar?, i: Int, boolean: Boolean) {
             if (boolean) {
                 playerBinder.seekTo(i)
@@ -215,4 +220,9 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
 
         }
     }
+
+//    override fun onDestroy() {
+//        super.onDestroy()
+//        Log.e(TAG, "onDestroy")
+//    }
 }
