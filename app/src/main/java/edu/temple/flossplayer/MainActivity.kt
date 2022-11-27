@@ -221,8 +221,9 @@ class MainActivity : AppCompatActivity(), BookControlFragment.controlInterface {
         }
     }
 
-//    override fun onDestroy() {
-//        super.onDestroy()
-//        Log.e(TAG, "onDestroy")
-//    }
+    override fun onDestroy() {
+        super.onDestroy()
+        if (isBound)
+            applicationContext.unbindService(serviceConnection)
+    }
 }
